@@ -1,0 +1,262 @@
+---
+title: "Extracción de datos"
+author: "Pablo Mas Cayuelas"
+date: "30/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rtweet)
+library(twitteR)
+library(dplyr)
+library(rlang)
+library(tidyr)
+library(rio)
+```
+
+```{r}
+consumer_key <- "8561WLkRJlkiuri0aLqO3O3CU"
+consumer_secret <-"CSyHwy6h1eOLe9RGhacq0CUVOOvAB74CCk9RMEy3VvvL7nywNQ"
+access_token <-"226663175-2WIU4JA7PYF61wtFDfxQRYiS8m3pTGxRlK48ckVj"
+access_secret <-"Myt3GfEAYlQb9megmv1rmwqpcL8wTiOh5CH0WSryI7B3e"
+setup_twitter_oauth(consumer_key, consumer_secret, access_token=access_token, access_secret=access_secret)
+```
+
+```{r}
+usuario<- userTimeline('usuario',n=100)
+usuario<- userTimeline('usuario',n=100)
+```
+
+
+```{r}
+do.call("rbind", lapply(xxx, as.data.frame))
+twListToDF(xxx)
+```
+
+
+```{r}
+# librería rtweet
+trump <- search_tweets("Trump", n = 10000, include_rts = FALSE) # hecho2
+export(trump, "./trump.csv")
+
+biden <- search_tweets("Biden", n = 10000, include_rts = FALSE) # hecho2
+export(biden, "./biden.csv")
+
+vote <- search_tweets("vote", n = 5000, include_rts = FALSE) # hecho2
+export(vote, "./vote.csv")
+
+atrump <- search_tweets("@realDonaldTrump", n = 5000, include_rts = FALSE) # hecho2
+export(atrump, "./atrump.csv")
+
+abiden <- search_tweets("@JoeBiden", n = 5000, include_rts = FALSE) # hecho2
+export(abiden, "./abiden.csv")
+
+electionday <- search_tweets("#ElectionDay", n = 8000, include_rts = FALSE) # hecho2
+export(electionday, "./electionday.csv")
+
+MAGA <- search_tweets("#MAGA", n = 5000, include_rts = FALSE) # hecho2
+export(MAGA, "./MAGA.csv")
+
+MAGA2020 <- search_tweets("#MAGA2020", n = 5000, include_rts = FALSE) # hecho2
+export(MAGA2020, "./MAGA2020.csv")
+
+Trump2020 <- search_tweets("#Trump2020", n = 5000, include_rts = FALSE) # hecho2
+export(Trump2020, "./Trump2020.csv")
+
+Election2020 <- search_tweets('#Election2020', n = 7000, include_rts = FALSE) # hecho2 
+export(Election2020, "./Election2020.csv")
+```
+
+
+
+```{r}
+# librería rtweet POPULARES
+trump_pop <- search_tweets("Trump", n = 10000, include_rts = FALSE, type = 'popular') # hecho2, solo 3000
+export(trump_pop, "./trump_pop.csv")
+
+biden_pop <- search_tweets("Biden", n = 10000, include_rts = FALSE, type = 'popular') # hecho2, solo 2100
+export(biden_pop, "./biden_pop.csv")
+
+vote_pop <- search_tweets("vote", n = 5000, include_rts = FALSE, type = 'popular') # hecho2, solo 2200
+export(vote_pop, "./vote_pop.csv")
+
+atrump_pop <- search_tweets("@realDonaldTrump", n = 5000, include_rts = FALSE, type = 'popular') # hecho2, 1800
+export(atrump_pop, "./atrump_pop.csv")
+
+abiden_pop <- search_tweets("@JoeBiden", n = 5000, include_rts = FALSE, type = 'popular') # hecho2, 1300
+export(abiden_pop, "./abiden_pop.csv")
+
+electionday_pop <- search_tweets("#ElectionDay", n = 8000, include_rts = FALSE, type = 'popular') # hecho2, 1280
+export(electionday_pop, "./electionday_pop.csv")
+
+MAGA_pop <- search_tweets("#MAGA", n = 5000, include_rts = FALSE, type = 'popular') # hecho2, 900
+export(MAGA_pop, "./MAGA_pop.csv")
+
+MAGA2020_pop <- search_tweets("#MAGA2020", n = 5000, include_rts = FALSE, type = 'popular') # hecho2, 800
+export(MAGA2020_pop, "./MAGA2020_pop.csv")
+
+Trump2020_pop <- search_tweets("#Trump2020", n = 5000, include_rts = FALSE, type = 'popular') # hecho2, 600
+export(Trump2020_pop, "./Trump2020_pop.csv")
+
+Election2020_pop <- search_tweets('#Election2020', n = 10000, include_rts = FALSE, type = 'popular') # hecho2, 1400
+export(Election2020_pop, "./Election2020_pop.csv")
+```
+
+
+```{r}
+# librería twitteR
+trump2 <-searchTwitter("Trump", n=10000, since='2020-10-20') # hecho2
+trump2.df<-twListToDF(trump2)
+export(trump2.df, "./trump2.csv")
+
+biden2 <-searchTwitter("Biden", n=10000, since='2020-10-20') # hecho2
+biden2.df<-twListToDF(biden2)
+export(biden2.df, "./biden2.csv")
+
+vote2 <- searchTwitter("vote", n=5000, since='2020-10-20') # hecho2
+vote2.df<-twListToDF(vote2)
+export(vote2.df, "./vote2.csv")
+
+atrump2 <- searchTwitter("@realDonaldTrump", n = 5000, since='2020-10-20') # hecho2
+atrump2.df<-twListToDF(atrump2)
+export(atrump2.df, "./atrump2.csv")
+
+abiden2 <- searchTwitter("@JoeBiden", n = 5000, since='2020-10-20') # hecho2
+abiden2.df<-twListToDF(abiden2)
+export(abiden2.df, "./abiden2.csv")
+
+electionday2 <- searchTwitter("#ElectionDay", n = 8000, since='2020-10-20') # hecho2
+electionday2.df<-twListToDF(electionday2)
+export(electionday2.df, "./electionday2.csv")
+
+MAGA2 <- searchTwitter("#MAGA", n = 5000, since = '2020-10-20') # hecho2
+MAGA2.df<-twListToDF(MAGA2)
+export(MAGA2.df, "./MAGA2.csv")
+
+MAGA20202 <- searchTwitter("#MAGA2020", n = 5000, since = '2020-10-20', until = '2020-11-03') # hecho2
+MAGA20202.df<-twListToDF(MAGA20202)
+export(MAGA20202.df, "./MAGA20202.csv")
+
+Trump20202 <- searchTwitter("#Trump2020", n = 5000, since = '2020-10-20', until = '2020-11-03') # hecho2
+Trump20202.df<-twListToDF(Trump20202)
+export(Trump20202.df, "./Trump20202.csv")
+
+Election20202 <- searchTwitter('#Election2020', n = 8000, since = '2020-10-20', until = '2020-11-03') # hecho2
+Election20202.df<-twListToDF(Election20202)
+export(Election20202.df, "./Election20202.csv")
+```
+
+
+
+
+```{r}
+# tuits de biden y trump
+usuarioTrump <- userTimeline('@realDonaldTrump', n=9000) # hecho2
+usuarioTrump.df<-twListToDF(usuarioTrump)
+export(usuarioTrump.df, "./usuarioTrump.csv")
+
+usuarioBiden <- userTimeline('@JoeBiden', n=9000) # hecho2
+usuarioBiden.df<-twListToDF(usuarioBiden)
+export(usuarioBiden.df, "./usuarioBiden.csv")
+```
+
+```{r}
+nuevousuarioTrump <- userTimeline('@realDonaldTrump', n=9000, maxID = 1322065847893020672) # hecho2
+nuevousuarioTrump.df<-twListToDF(nuevousuarioTrump)
+export(nuevousuarioTrump.df, "./nuevousuarioTrump.csv")
+```
+
+```{r}
+nuevousuarioTrump2 <- userTimeline('@realDonaldTrump', n=9000, maxID = 1322070135524495360) # hecho2
+nuevousuarioTrump2.df<-twListToDF(nuevousuarioTrump2)
+export(nuevousuarioTrump2.df, "./nuevousuarioTrump2.csv")
+```
+
+
+
+```{r}
+# librería twitteR 1-2 noviembre
+trump3 <-searchTwitter("Trump", n=10000, since='2020-11-1', until = '2020-11-2') # hecho3
+trump3.df<-twListToDF(trump3)
+export(trump3.df, "./trump3.csv")
+
+biden3 <-searchTwitter("Biden", n=10000, since='2020-11-1', until = '2020-11-2') # hecho3
+biden3.df<-twListToDF(biden3)
+export(biden3.df, "./biden3.csv")
+
+vote3 <- searchTwitter("vote", n=5000, since='2020-11-1', until = '2020-11-2') # hecho3
+vote3.df<-twListToDF(vote3)
+export(vote3.df, "./vote3.csv")
+
+atrump3 <- searchTwitter("@realDonaldTrump", n = 5000, since='2020-11-1', until = '2020-11-2') # hecho3
+atrump3.df<-twListToDF(atrump3)
+export(atrump3.df, "./atrump3.csv")
+
+abiden3 <- searchTwitter("@JoeBiden", n = 5000, since='2020-11-1', until = '2020-11-2') # hecho3
+abiden3.df<-twListToDF(abiden3)
+export(abiden3.df, "./abiden3.csv")
+
+electionday3 <- searchTwitter("#ElectionDay", n = 8000, since='2020-11-1', until = '2020-11-2') # hecho3
+electionday3.df<-twListToDF(electionday3)
+export(electionday3.df, "./electionday3.csv")
+
+MAGA3 <- searchTwitter("#MAGA", n = 5000, since='2020-11-1', until = '2020-11-2') # hecho3
+MAGA3.df<-twListToDF(MAGA3)
+export(MAGA3.df, "./MAGA3.csv")
+
+MAGA20203 <- searchTwitter("#MAGA2020", n = 5000, since='2020-11-1', until = '2020-11-2') # hecho3
+MAGA20203.df<-twListToDF(MAGA20203)
+export(MAGA20203.df, "./MAGA20203.csv")
+
+Trump20203 <- searchTwitter("#Trump2020", n = 5000, since='2020-11-1', until = '2020-11-2') # hecho3
+Trump20203.df<-twListToDF(Trump20203)
+export(Trump20203.df, "./Trump20203.csv")
+
+Election20203 <- searchTwitter('#Election2020', n = 8000, since='2020-11-1', until = '2020-11-2') # hecho3
+Election20203.df<-twListToDF(Election20203)
+export(Election20203.df, "./Election20203.csv")
+```
+
+```{r}
+# librería twitteR 1-2 noviembre
+trump4 <-searchTwitter("Trump", n=10000, since='2020-11-3', until = '2020-11-4') # hecho4
+trump4.df<-twListToDF(trump4)
+export(trump4.df, "./trump4.csv")
+
+biden4 <-searchTwitter("Biden", n=10000, since='2020-11-3', until = '2020-11-4') # hecho4
+biden4.df<-twListToDF(biden4)
+export(biden4.df, "./biden4.csv")
+
+vote4 <- searchTwitter("vote", n=5000, since='2020-11-3', until = '2020-11-4') # hecho4
+vote4.df<-twListToDF(vote4)
+export(vote4.df, "./vote4.csv")
+
+atrump4 <- searchTwitter("@realDonaldTrump", n = 5000, since='2020-11-3', until = '2020-11-4') # hecho4
+atrump4.df<-twListToDF(atrump4)
+export(atrump4.df, "./atrump4.csv")
+
+abiden4 <- searchTwitter("@JoeBiden", n = 5000, since='2020-11-3', until = '2020-11-4') # hecho3
+abiden4.df<-twListToDF(abiden4)
+export(abiden4.df, "./abiden4.csv")
+
+electionday4 <- searchTwitter("#ElectionDay", n = 8000, since='2020-11-3', until = '2020-11-4') # hecho3
+electionday4.df<-twListToDF(electionday4)
+export(electionday4.df, "./electionday4.csv")
+
+MAGA4 <- searchTwitter("#MAGA", n = 5000, since='2020-11-3', until = '2020-11-4') # hecho3
+MAGA4.df<-twListToDF(MAGA4)
+export(MAGA4.df, "./MAGA4.csv")
+
+MAGA20204 <- searchTwitter("#MAGA2020", n = 5000, since='2020-11-3', until = '2020-11-4') # hecho3
+MAGA20204.df<-twListToDF(MAGA20204)
+export(MAGA20204.df, "./MAGA20204.csv")
+
+Trump20204 <- searchTwitter("#Trump2020", n = 5000, since='2020-11-3', until = '2020-11-4') # hecho3
+Trump20204.df<-twListToDF(Trump20204)
+export(Trump20204.df, "./Trump20204.csv")
+
+Election20204 <- searchTwitter('#Election2020', n = 8000, since='2020-11-3', until = '2020-11-4') # hecho3
+Election20204.df<-twListToDF(Election20204)
+export(Election20204.df, "./Election20204.csv")
+```

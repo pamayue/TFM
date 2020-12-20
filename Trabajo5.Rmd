@@ -1,0 +1,496 @@
+---
+title: "Trabajo5"
+author: "Pablo Mas Cayuelas"
+date: "30/11/2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rtweet)
+library(twitteR)
+library(dplyr)
+library(rlang)
+library(tidyr)
+library(rio)
+```
+
+```{r}
+library(bitops)
+library(RCurl)
+library(rjson)
+library(twitteR)
+library(tm)
+library(Rcpp)
+library(RColorBrewer)
+library(wordcloud)
+library(stringr)
+```
+
+```{r}
+# Import the data and look at the first six rows
+vote <- read.csv(file = 'vote.csv')
+vote2 <- read.csv(file = 'vote2.csv')
+vote3 <- read.csv(file = 'vote3.csv')
+vote4 <- read.csv(file = 'vote4.csv')
+```
+
+```{r}
+texto3 <- c(as.character(vote$text), as.character(vote2$text))
+textoclean3 = gsub("[[:punct:]]", "", texto3)  #simbolos de puntuacion
+textoclean3 = gsub("[[:digit:]]", "", textoclean3)  #Numeros
+textoclean3 = gsub("http\\w+", "", textoclean3)   #Links
+textoclean3 = gsub("@\\w+", "", textoclean3)  #@otragente
+textoclean3 = gsub("(RT|via)((?:\b\\W*@\\w+)+)", "", textoclean3) #Retuits
+
+texto4 <- c(as.character(vote3$text), as.character(vote4$text))
+textoclean4 = gsub("[[:punct:]]", "", texto4)  #simbolos de puntuacion
+textoclean4 = gsub("[[:digit:]]", "", textoclean4)  #Numeros
+textoclean4 = gsub("http\\w+", "", textoclean4)   #Links
+textoclean4 = gsub("@\\w+", "", textoclean4)  #@otragente
+textoclean4 = gsub("(RT|via)((?:\b\\W*@\\w+)+)", "", textoclean4) #Retuits
+```
+
+```{r}
+# construimos el corpus
+corpus3 = Corpus(VectorSource(textoclean3))
+corpus4 = Corpus(VectorSource(textoclean4))
+
+# Lo pasamos todo a minúsculas
+corpus3 = tm_map(corpus3, tolower)
+corpus4 = tm_map(corpus4, tolower)
+
+# Quitamos las palabras vacias de contenido en inglés (en, la, por,…) y el nombre de biden
+
+corpus3 = tm_map(corpus3, removeWords, c(stopwords("english"), stopwords("spanish"), "vote"))
+corpus4 = tm_map(corpus4, removeWords, c(stopwords("english"), stopwords("spanish"), "vote"))
+
+# Quitamos los espacios en blanco extras
+corpus3 = tm_map(corpus3, stripWhitespace)
+corpus4 = tm_map(corpus4, stripWhitespace)
+
+# Creamos la matriz de terminos a partir del corpus
+tdm3 <- TermDocumentMatrix(corpus3)
+m3 = as.matrix(tdm3)
+
+tdm4 <- TermDocumentMatrix(corpus4)
+m4 = as.matrix(tdm4)
+
+# Orden de uso de palabras de forma decreciente
+wf3 <- sort(rowSums(m3),decreasing=TRUE)
+wf4 <- sort(rowSums(m4),decreasing=TRUE)
+
+# Crea un data frame con las palabras y sus frecuencias
+dm3 <- data.frame(word = names(wf3), freq=wf3)
+dm4 <- data.frame(word = names(wf4), freq=wf4)
+
+totales_vote <- rbind(dm3, dm4)
+totales_vote <- aggregate(freq ~ word, totales_vote, sum)
+totales_vote <- totales_vote[with(totales_vote, order(-totales_vote$freq)), ] # Orden inverso
+totales_vote <- totales_vote[!str_detect(totales_vote$word, "Ã"), ]
+totales_vote <- totales_vote[!str_detect(totales_vote$word, "€"), ]
+
+# Imprime la nube de palabras
+wordcloud(totales_vote$word, totales_vote$freq, max.words=100, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+export(head(totales_vote, n = 20), "./head_vote.csv")
+```
+
+MÁS MENCIONADAS EN GENERAL
+
+```{r}
+# COGEMOS LOS TUITS POPULARES DE TODOS LOS ARCHIVOS
+head_abiden <- read.csv(file = 'head_abiden.csv')
+head_atrump <- read.csv(file = 'head_atrump.csv')
+head_biden <- read.csv(file = 'head_biden.csv')
+head_Election2020 <- read.csv(file = 'head_Election2020.csv')
+head_electionday <- read.csv(file = 'head_electionday.csv')
+head_MAGA <- read.csv(file = 'head_MAGA2020.csv')
+head_MAGA2020 <- read.csv(file = 'head_MAGA2020.csv')
+head_trump <- read.csv(file = 'head_trump.csv')
+head_Trump2020 <- read.csv(file = 'head_Trump2020.csv')
+head_vote <- read.csv(file = 'head_vote.csv')
+```
+
+```{r}
+head_general <- rbind(head_abiden, head_atrump, head_biden, head_Election2020, head_electionday,
+                      head_MAGA, head_MAGA2020, head_trump, head_Trump2020, head_vote)
+
+head_general <- aggregate(freq ~ word, head_general, sum)
+head_general <- head_general[with(head_general, order(-head_general$freq)), ] # Orden inverso
+head_general <- head_general[!str_detect(head_general$word, "Ã"), ]
+head_general <- head_general[!str_detect(head_general$word, "€"), ]
+
+# Imprime la nube de palabras
+wordcloud(head_general$word, head_general$freq, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+export(head_general, "./head_general.csv")
+```
+
+```{r}
+# un barplot
+barplot(head_general$freq, names.arg = head_general$word, col="chocolate",
+        legend = rownames(head_general$word), cex.names=0.5, las=2, main = "Frecuencias de las palabras más repetidas en general")
+```
+
+
+
+TODAS JUNTAS
+
+```{r}
+l_trump = length(trump) + length(trump2) + length(trump3) + length(trump4)
+l_biden = length(biden) + length(biden2) + length(biden3) + length(biden4)
+l_electionday = length(electionday) + length(electionday2) + length(electionday3) + length(electionday4)
+l_Election2020 = length(Election2020) + length(Election20202) + length(Election20203) + length(Election20204)
+l_atrump = length(atrump) + length(atrump2) + length(atrump3) + length(atrump4)
+l_abiden = length(abiden) + length(abiden2) + length(abiden3) + length(abiden4)
+l_MAGA = length(MAGA) + length(MAGA2) + length(MAGA3) + length(MAGA4)
+l_MAGA2020 = length(MAGA2020) + length(MAGA20202) + length(MAGA20203) + length(MAGA20204)
+l_vote = length(vote) + length(vote2) + length(vote3) + length(vote4)
+
+head_trump$freqrelat = head_trump$freq/l_trump
+head_biden$freqrelat = head_biden$freq/l_biden
+head_electionday$freqrelat = head_electionday$freq/l_electionday
+head_Election2020$freqrelat = head_Election2020$freq/l_Election2020
+head_atrump$freqrelat = head_atrump$freq/l_atrump
+head_abiden$freqrelat = head_abiden$freq/l_abiden
+head_MAGA$freqrelat = head_MAGA$freq/l_MAGA
+head_MAGA2020$freqrelat = head_MAGA2020$freq/l_MAGA2020
+head_vote$freqrelat = head_vote$freq/l_vote
+
+totales <- rbind(head_trump, head_biden, head_atrump, head_abiden, head_electionday,
+                 head_Election2020, head_MAGA, head_MAGA2020, head_vote)
+totales <- aggregate(freqrelat ~ word, totales, sum)
+totales <- totales[with(totales, order(-totales$freqrelat)), ] # Orden inverso
+
+barplot(head(totales$freqrelat, n = 20), names.arg = head(totales$word, n = 20), col="chocolate",
+        legend = rownames(head(totales$word, n = 20)), cex.names=0.7, las=2, main = "Frecuencias relativas de las palabras más repetidas")
+```
+
+DIFERENCIA INTERACCIONES BIDEN VS TRUMP
+
+```{r}
+usuariotrump <- read.csv(file = 'usuarioTrump.csv')
+nuevousuariotrump <- read.csv(file = 'nuevousuarioTrump.csv')
+nuevousuariotrump2 <- read.csv(file = 'nuevousuarioTrump2.csv')
+usuariotrump <- rbind(usuariotrump, nuevousuariotrump, nuevousuariotrump2)
+
+usuariobiden <- read.csv(file = 'usuariobiden.csv')
+```
+
+```{r}
+favoritos <- c(sum(usuariotrump$favoriteCount)/length(usuariotrump[,1]),
+               sum(usuariobiden$favoriteCount)/length(usuariobiden[,1]))
+retuits <- c(sum(usuariotrump$retweetCount)/length(usuariotrump[,1]),
+             sum(usuariobiden$retweetCount)/length(usuariobiden[,1]))
+interacciones <- favoritos + retuits
+usuarios <- c('@realDonaldTrump', '@JoeBiden')
+```
+
+```{r}
+barplot(interacciones, names.arg = usuarios, col="chocolate",
+         main = "Media de interacciones de Donald Trump y Joe Biden")
+```
+
+QUE NOMBREN A TRUMP
+
+```{r}
+# trump es diferente de trump2, trump3 y trump4
+trump <- read.csv(file = 'trump.csv')
+trump2 <- read.csv(file = 'trump2.csv')
+trump3 <- read.csv(file = 'trump3.csv')
+trump4 <- read.csv(file = 'trump4.csv')
+
+trump_fav_tot <- c(trump$favorite_count, trump2$favoriteCount, trump3$favoriteCount, trump4$favoriteCount)
+trump_rt_tot <- c(trump$retweet_count, trump2$retweetCount, trump3$retweetCount, trump4$retweetCount)
+trump_tot <- trump_fav_tot + trump_rt_tot
+```
+
+QUE NOMBREN A BIDEN
+
+```{r}
+# biden es diferente de biden2, biden3 y biden4
+biden <- read.csv(file = 'biden.csv')
+biden2 <- read.csv(file = 'biden2.csv')
+biden3 <- read.csv(file = 'biden3.csv')
+biden4 <- read.csv(file = 'biden4.csv')
+
+biden_fav_tot <- c(biden$favorite_count, biden2$favoriteCount, biden3$favoriteCount, biden4$favoriteCount)
+biden_rt_tot <- c(biden$retweet_count, biden2$retweetCount, biden3$retweetCount, biden4$retweetCount)
+biden_tot <- biden_fav_tot + biden_rt_tot
+```
+
+pues las juntamos
+
+```{r}
+interacciones <- c(sum(trump_tot)/length(trump_tot),sum(biden_tot)/length(biden_tot))
+barplot(interacciones, names.arg = c("Trump", "Biden"), col="chocolate", main = "Interacciones que contienen los nombres de Trump y Biden")
+```
+
+Nombrar a trump da más interacciones que a biden
+
+QUE MENCIONEN A TRUMP
+
+```{r}
+# atrump es diferente de atrump2, atrump3 y atrump4
+atrump <- read.csv(file = 'atrump.csv')
+atrump2 <- read.csv(file = 'atrump2.csv')
+atrump3 <- read.csv(file = 'atrump3.csv')
+atrump4 <- read.csv(file = 'atrump4.csv')
+
+atrump_fav_tot <- c(atrump$favorite_count, atrump2$favoriteCount, atrump3$favoriteCount, atrump4$favoriteCount)
+atrump_rt_tot <- c(atrump$retweet_count, atrump2$retweetCount, atrump3$retweetCount, atrump4$retweetCount)
+atrump_tot <- atrump_fav_tot + atrump_rt_tot
+```
+
+QUE NOMBREN A BIDEN
+
+```{r}
+# biden es diferente de biden2, biden3 y biden4
+abiden <- read.csv(file = 'abiden.csv')
+abiden2 <- read.csv(file = 'abiden2.csv')
+abiden3 <- read.csv(file = 'abiden3.csv')
+abiden4 <- read.csv(file = 'abiden4.csv')
+
+abiden_fav_tot <- c(abiden$favorite_count, abiden2$favoriteCount, abiden3$favoriteCount, abiden4$favoriteCount)
+abiden_rt_tot <- c(abiden$retweet_count, abiden2$retweetCount, abiden3$retweetCount, abiden4$retweetCount)
+abiden_tot <- abiden_fav_tot + abiden_rt_tot
+```
+
+pues las juntamos
+
+```{r}
+interacciones <- c(sum(atrump_tot)/length(atrump_tot),sum(abiden_tot)/length(abiden_tot))
+barplot(interacciones, names.arg = c("Trump", "Biden"), col="chocolate", main = "Interacciones de los tuits dirigidos a los usuarios de Trump y Biden")
+```
+
+Mencionar a Trump da incluso más interacciones
+
+FRECUENCIA DE LOS TUITS (JUGAR CON HORAS)
+
+```{r}
+# TRUMP
+trump$day <- as.numeric(substr(trump$created_at, 9, 10))
+trump2$day <- as.numeric(substr(trump2$created, 9, 10))
+trump3$day <- as.numeric(substr(trump3$created, 9, 10))
+trump4$day <- as.numeric(substr(trump4$created, 9, 10))
+
+trump$hour <- as.numeric(substr(trump$created_at, 12, 13))
+trump2$hour <- as.numeric(substr(trump2$created, 12, 13))
+trump3$hour <- as.numeric(substr(trump3$created, 12, 13))
+trump4$hour <- as.numeric(substr(trump4$created, 12, 13))
+
+trump$minute <- as.numeric(substr(trump$created_at, 15, 16))
+trump2$minute <- as.numeric(substr(trump2$created, 15, 16))
+trump3$minute <- as.numeric(substr(trump3$created, 15, 16))
+trump4$minute <- as.numeric(substr(trump4$created, 15, 16))
+
+trump$second <- as.numeric(substr(trump$created_at, 18,19))
+trump2$second <- as.numeric(substr(trump2$created,  18,19))
+trump3$second <- as.numeric(substr(trump3$created,  18,19))
+trump4$second <- as.numeric(substr(trump4$created,  18,19))
+
+trump$time <- 86400*trump$day + 3600*trump$hour + 60*trump$minute + trump$second
+trump2$time <- 86400*trump2$day + 3600*trump2$hour + 60*trump2$minute + trump2$second
+trump3$time <- 86400*trump3$day + 3600*trump3$hour + 60*trump3$minute + trump3$second
+trump4$time <- 86400*trump4$day + 3600*trump4$hour + 60*trump4$minute + trump4$second
+```
+
+```{r}
+# tuits por segundo trump
+ts_trump1 <- length(trump$time)/(-trump$time[length(trump$time)]+trump$time[1])
+ts_trump2 <- length(trump2$time)/(-trump2$time[length(trump2$time)]+trump2$time[1])
+ts_trump3 <- length(trump3$time)/(-trump3$time[length(trump3$time)]+trump3$time[1])
+ts_trump4 <- length(trump4$time)/(-trump4$time[length(trump4$time)]+trump4$time[1])
+ts_trump <- (ts_trump1+ts_trump2+ts_trump3+ts_trump4)/4
+```
+
+
+```{r}
+# BIDEN
+biden$day <- as.numeric(substr(biden$created_at, 9, 10))
+biden2$day <- as.numeric(substr(biden2$created, 9, 10))
+biden3$day <- as.numeric(substr(biden3$created, 9, 10))
+biden4$day <- as.numeric(substr(biden4$created, 9, 10))
+
+biden$hour <- as.numeric(substr(biden$created_at, 12, 13))
+biden2$hour <- as.numeric(substr(biden2$created, 12, 13))
+biden3$hour <- as.numeric(substr(biden3$created, 12, 13))
+biden4$hour <- as.numeric(substr(biden4$created, 12, 13))
+
+biden$minute <- as.numeric(substr(biden$created_at, 15, 16))
+biden2$minute <- as.numeric(substr(biden2$created, 15, 16))
+biden3$minute <- as.numeric(substr(biden3$created, 15, 16))
+biden4$minute <- as.numeric(substr(biden4$created, 15, 16))
+
+biden$second <- as.numeric(substr(biden$created_at, 18, 19))
+biden2$second <- as.numeric(substr(biden2$created, 18, 19))
+biden3$second <- as.numeric(substr(biden3$created, 18, 19))
+biden4$second <- as.numeric(substr(biden4$created, 18, 19))
+
+biden$time <- 86400*biden$day + 3600*biden$hour + 60*biden$minute + biden$second
+biden2$time <- 86400*biden2$day + 3600*biden2$hour + 60*biden2$minute + biden2$second
+biden3$time <- 86400*biden3$day + 3600*biden3$hour + 60*biden3$minute + biden3$second
+biden4$time <- 86400*biden4$day + 3600*biden4$hour + 60*biden4$minute + biden4$second
+```
+
+```{r}
+# tuits por segundo biden
+ts_biden1 <- length(biden$time)/(-biden$time[length(biden$time)]+biden$time[1])
+ts_biden2 <- length(biden2$time)/(-biden2$time[length(biden2$time)]+biden2$time[1])
+ts_biden3 <- length(biden3$time)/(-biden3$time[length(biden3$time)]+biden3$time[1])
+ts_biden4 <- length(biden4$time)/(-biden4$time[length(biden4$time)]+biden4$time[1])
+ts_biden <- (ts_biden1+ts_biden2+ts_biden3+ts_biden4)/4
+```
+
+Decir que las frecuencias están bien hechas porque se ha cogido tuits que contienen los nombres de Trump y Biden igual de espaciados en el tiempo.
+
+```{r}
+ts <- c(ts_trump, ts_biden)
+barplot(ts, names.arg = c("Trump", "Biden"), col="chocolate", main = "Tuits por segundo mencionando los nombres de Trump y Biden")
+```
+
+FRECUENCIA DE LOS TUITS (JUGAR CON HORAS)
+
+```{r}
+# TRUMP
+atrump$day <- as.numeric(substr(atrump$created_at, 9, 10))
+atrump2$day <- as.numeric(substr(atrump2$created, 9, 10))
+atrump3$day <- as.numeric(substr(atrump3$created, 9, 10))
+atrump4$day <- as.numeric(substr(atrump4$created, 9, 10))
+
+atrump$hour <- as.numeric(substr(atrump$created_at, 12, 13))
+atrump2$hour <- as.numeric(substr(atrump2$created, 12, 13))
+atrump3$hour <- as.numeric(substr(atrump3$created, 12, 13))
+atrump4$hour <- as.numeric(substr(atrump4$created, 12, 13))
+
+atrump$minute <- as.numeric(substr(atrump$created_at, 15, 16))
+atrump2$minute <- as.numeric(substr(atrump2$created, 15, 16))
+atrump3$minute <- as.numeric(substr(atrump3$created, 15, 16))
+atrump4$minute <- as.numeric(substr(atrump4$created, 15, 16))
+
+atrump$second <- as.numeric(substr(atrump$created_at, 18,19))
+atrump2$second <- as.numeric(substr(atrump2$created,  18,19))
+atrump3$second <- as.numeric(substr(atrump3$created,  18,19))
+atrump4$second <- as.numeric(substr(atrump4$created,  18,19))
+
+atrump$time <- 86400*atrump$day + 3600*atrump$hour + 60*atrump$minute + atrump$second
+atrump2$time <- 86400*atrump2$day + 3600*atrump2$hour + 60*atrump2$minute + atrump2$second
+atrump3$time <- 86400*atrump3$day + 3600*atrump3$hour + 60*atrump3$minute + atrump3$second
+atrump4$time <- 86400*atrump4$day + 3600*atrump4$hour + 60*atrump4$minute + atrump4$second
+```
+
+```{r}
+# tuits por segundo trump
+ts_atrump1 <- length(atrump$time)/(-atrump$time[length(atrump$time)]+atrump$time[1])
+ts_atrump2 <- length(atrump2$time)/(-atrump2$time[length(atrump2$time)]+atrump2$time[1])
+ts_atrump3 <- length(atrump3$time)/(-atrump3$time[length(atrump3$time)]+atrump3$time[1])
+ts_atrump4 <- length(atrump4$time)/(-atrump4$time[length(atrump4$time)]+atrump4$time[1])
+ts_atrump <- (ts_atrump1+ts_atrump2+ts_atrump3+ts_atrump4)/4
+```
+
+
+```{r}
+# BIDEN
+abiden$day <- as.numeric(substr(abiden$created_at, 9, 10))
+abiden2$day <- as.numeric(substr(abiden2$created, 9, 10))
+abiden3$day <- as.numeric(substr(abiden3$created, 9, 10))
+abiden4$day <- as.numeric(substr(abiden4$created, 9, 10))
+
+abiden$hour <- as.numeric(substr(abiden$created_at, 12, 13))
+abiden2$hour <- as.numeric(substr(abiden2$created, 12, 13))
+abiden3$hour <- as.numeric(substr(abiden3$created, 12, 13))
+abiden4$hour <- as.numeric(substr(abiden4$created, 12, 13))
+
+abiden$minute <- as.numeric(substr(abiden$created_at, 15, 16))
+abiden2$minute <- as.numeric(substr(abiden2$created, 15, 16))
+abiden3$minute <- as.numeric(substr(abiden3$created, 15, 16))
+abiden4$minute <- as.numeric(substr(abiden4$created, 15, 16))
+
+abiden$second <- as.numeric(substr(abiden$created_at, 18, 19))
+abiden2$second <- as.numeric(substr(abiden2$created, 18, 19))
+abiden3$second <- as.numeric(substr(abiden3$created, 18, 19))
+abiden4$second <- as.numeric(substr(abiden4$created, 18, 19))
+
+abiden$time <- 86400*abiden$day + 3600*abiden$hour + 60*abiden$minute + abiden$second
+abiden2$time <- 86400*abiden2$day + 3600*abiden2$hour + 60*abiden2$minute + abiden2$second
+abiden3$time <- 86400*abiden3$day + 3600*abiden3$hour + 60*abiden3$minute + abiden3$second
+abiden4$time <- 86400*abiden4$day + 3600*abiden4$hour + 60*abiden4$minute + abiden4$second
+```
+
+```{r}
+# tuits por segundo biden
+ts_abiden1 <- length(abiden$time)/(-abiden$time[length(abiden$time)]+abiden$time[1])
+ts_abiden2 <- length(abiden2$time)/(-abiden2$time[length(abiden2$time)]+abiden2$time[1])
+ts_abiden3 <- length(abiden3$time)/(-abiden3$time[length(abiden3$time)]+abiden3$time[1])
+ts_abiden4 <- length(abiden4$time)/(-abiden4$time[length(abiden4$time)]+abiden4$time[1])
+ts_abiden <- (ts_abiden1+ts_abiden2+ts_abiden3+ts_abiden4)/4
+```
+
+Decir que las frecuencias están bien hechas porque se ha cogido tuits que contienen los nombres de Trump y Biden igual de espaciados en el tiempo.
+
+```{r}
+ts_a <- c(ts_atrump, ts_abiden)
+barplot(ts_a, names.arg = usuarios, col="chocolate", main = "Tuits por segundo mencionando los usuarios de Trump y Biden")
+```
+TUITS POR SEGUNDO DE LOS USUARIOS
+
+```{r}
+# USUARIOS TRUMP Y BIDEN
+usuariotrump$month <- as.numeric(substr(usuariotrump$created, 6, 7))
+nuevousuariotrump$month <- as.numeric(substr(nuevousuariotrump$created, 6, 7))
+nuevousuariotrump2$month <- as.numeric(substr(nuevousuariotrump2$created, 6, 7))
+usuariobiden$month <- as.numeric(substr(usuariobiden$created, 6, 7))
+
+usuariotrump$day <- as.numeric(substr(usuariotrump$created, 9, 10))
+nuevousuariotrump$day <- as.numeric(substr(nuevousuariotrump$created, 9, 10))
+nuevousuariotrump2$day <- as.numeric(substr(nuevousuariotrump2$created, 9, 10))
+usuariobiden$day <- as.numeric(substr(usuariobiden$created, 9, 10))
+
+usuariotrump$hour <- as.numeric(substr(usuariotrump$created, 12, 13))
+nuevousuariotrump$hour <- as.numeric(substr(nuevousuariotrump$created, 12, 13))
+nuevousuariotrump2$hour <- as.numeric(substr(nuevousuariotrump2$created, 12, 13))
+usuariobiden$hour <- as.numeric(substr(usuariobiden$created, 12, 13))
+
+usuariotrump$minute <- as.numeric(substr(usuariotrump$created, 15, 16))
+nuevousuariotrump$minute <- as.numeric(substr(nuevousuariotrump$created, 15, 16))
+nuevousuariotrump2$minute <- as.numeric(substr(nuevousuariotrump2$created, 15, 16))
+usuariobiden$minute <- as.numeric(substr(usuariobiden$created, 15, 16))
+
+usuariotrump$second <- as.numeric(substr(usuariotrump$created,  18,19))
+nuevousuariotrump$second <- as.numeric(substr(nuevousuariotrump$created,  18,19))
+nuevousuariotrump2$second <- as.numeric(substr(nuevousuariotrump2$created,  18,19))
+usuariobiden$second <- as.numeric(substr(usuariobiden$created,  18,19))
+
+usuariotrump$time <- 31*86400*usuariotrump$month + 86400*usuariotrump$day +
+                    3600*usuariotrump$hour + 60*usuariotrump$minute + usuariotrump$second
+nuevousuariotrump$time <- 31*86400*nuevousuariotrump$month + 86400*nuevousuariotrump$day + 3600*nuevousuariotrump$hour +
+                          60*nuevousuariotrump$minute + nuevousuariotrump$second
+nuevousuariotrump2$time <- 31*86400*nuevousuariotrump2$month + 86400*nuevousuariotrump2$day + 3600*nuevousuariotrump2$hour +
+                          60*nuevousuariotrump2$minute + nuevousuariotrump2$second
+usuariobiden$time <- 31*86400*usuariobiden$month + 86400*usuariobiden$day +
+                    3600*usuariobiden$hour + 60*usuariobiden$minute + usuariobiden$second
+```
+
+```{r}
+# Tuits por segundo de Trump y Biden
+# Hay que hacer algo con los días porque no se cuentan bien los segundos totales. Creo que multiplicando por los meses tb sobra 
+
+# Donald
+ts_usuariotrump1 <- length(usuariotrump$time)/(-usuariotrump$time[length(usuariotrump$time)]+usuariotrump$time[1])
+ts_nuevousuariotrump <- length(nuevousuariotrump$time)/(-nuevousuariotrump$time[length(nuevousuariotrump$time)]+
+                                                          nuevousuariotrump$time[1])
+ts_nuevousuariotrump2 <- length(nuevousuariotrump2$time)/(-nuevousuariotrump2$time[length(nuevousuariotrump2$time)]+
+                                                            nuevousuariotrump2$time[1])
+ts_usuariotrump <- (ts_usuariotrump1+ts_nuevousuariotrump+ts_nuevousuariotrump2)/3
+
+# Joe
+ts_usuariobiden <- length(usuariobiden$time)/(-usuariobiden$time[length(usuariobiden$time)]+usuariobiden$time[1])
+```
+
+```{r}
+ts_usuarios <- c(ts_usuariotrump, ts_usuariobiden)
+barplot(ts_usuarios, names.arg = usuarios, col="chocolate",  main = "Tuits por segundo de las cuentas de Donald Trump y Joe Biden")
+```
+
+Igual está bien cuántas veces tuitea uno más que el otro en la semana de las elecciones.
+

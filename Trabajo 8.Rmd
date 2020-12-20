@@ -1,0 +1,382 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rtweet)
+library(twitteR)
+library(dplyr)
+library(rlang)
+library(tidyr)
+library(rio)
+```
+
+```{r}
+library(bitops)
+library(RCurl)
+library(rjson)
+library(twitteR)
+library(tm)
+library(Rcpp)
+library(RColorBrewer)
+library(wordcloud)
+```
+
+
+
+```{r}
+limpiar_tokenizar <- function(texto){
+  # El orden de la limpieza no es arbitrario
+    # Se convierte todo el texto a minúsculas
+    nuevo_texto <- tolower(texto)
+    # Eliminación de páginas web (palabras que empiezan por "http." seguidas 
+    # de cualquier cosa que no sea un espacio)
+    nuevo_texto <- str_replace_all(nuevo_texto,"http\\S*", "")
+    # Eliminación de signos de puntuación
+    nuevo_texto <- str_replace_all(nuevo_texto,"[[:punct:]]", " ")
+    # Eliminación de números
+    nuevo_texto <- str_replace_all(nuevo_texto,"[[:digit:]]", " ")
+    # Eliminación de espacios en blanco múltiples
+    nuevo_texto <- str_replace_all(nuevo_texto,"[\\s]+", " ")
+    # Tokenización por palabras individuales
+    nuevo_texto <- str_split(nuevo_texto, " ")[[1]]
+    # Eliminación de tokens con una longitud < 2
+    nuevo_texto <- keep(.x = nuevo_texto, .p = function(x){str_length(x) > 1})
+    return(nuevo_texto)
+}
+```
+
+DÍA 02/11/2020
+
+```{r}
+trump <- read.csv(file = 'trump.csv')
+biden <- read.csv(file = 'biden.csv')
+atrump <- read.csv(file = 'atrump.csv')
+abiden <- read.csv(file = 'abiden.csv')
+vote <- read.csv(file = 'vote.csv')
+MAGA <- read.csv(file = 'MAGA.csv')
+MAGA2020 <- read.csv(file = 'MAGA2020.csv')
+Trump2020 <- read.csv(file = 'Trump2020.csv')
+electionday <- read.csv(file = 'electionday.csv')
+Election2020 <- read.csv(file = 'Election2020.csv')
+```
+
+```{r}
+text_total <- unique(rbind(trump, biden, atrump, abiden, vote, MAGA, MAGA2020, Trump2020, electionday, Election2020))
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+text_total <- text_total %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+text_total %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+text_total_tidy <- text_total %>% select(-text) %>% unnest()
+text_total_tidy <- text_total_tidy %>% rename(token = texto_tokenizado)
+
+lista_stopwords <- c('me', 'my', 'myself', 'we', 'en', 'our', 'ours', 'ourselves',
+               'you','your', 'yours', 'yourself', 'yourselves', 'he', 'him','his',
+               'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself',
+               'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which',
+               'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
+               'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+               'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and',
+               'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at',
+               'by', 'for', 'with', 'about', 'against', 'between', 'into',
+               'through', 'during', 'before', 'after', 'above', 'below', 'to',
+               'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under',
+               'again', 'further', 'then', 'once', 'here', 'there', 'when',
+               'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more',
+               'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own',
+               'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will',
+               'just', 'don', 'should', 'now', 'd', 'll', 'm', 'o', 're', 've',
+               'y', 'ain', 'aren', 'couldn', 'didn', 'doesn', 'hadn', 'hasn',
+               'haven', 'isn', 'ma', 'mightn', 'mustn', 'needn', 'shan', 'por',
+               'shouldn', 'wasn', 'weren', 'won', 'wouldn','i', 'de', 'que', 'el', 'la', 'rt')
+# Se añade el término amp al listado de stopwords
+lista_stopwords <- c(lista_stopwords, "amp")
+
+# Se filtran las stopwords
+text_total_tidy <- text_total_tidy %>% filter(!(token %in% lista_stopwords))
+
+text_total_tidy <- text_total_tidy[!str_detect(text_total_tidy$token, "ÿ"), ]
+text_total_tidy <- text_total_tidy[!str_detect(text_total_tidy$token, "€"), ]
+text_total_tidy <- text_total_tidy[!str_detect(text_total_tidy$token, "Ã"), ]
+
+totales_1 <- text_total_tidy %>% group_by(token) %>% count(token) %>%
+            top_n(100, n) %>% arrange(desc(n))
+
+# Imprime la nube de palabras
+wordcloud(totales_1$token, totales_1$n, max.words = 100, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+# export(totales_1, "./totales_1.csv")
+```
+
+DÍA 31/10/2020 TWITTER
+
+```{r}
+trump2 <- read.csv(file = 'trump2.csv')
+biden2 <- read.csv(file = 'biden2.csv')
+atrump2 <- read.csv(file = 'atrump2.csv')
+abiden2 <- read.csv(file = 'abiden2.csv')
+vote2 <- read.csv(file = 'vote2.csv')
+MAGA2 <- read.csv(file = 'MAGA2.csv')
+MAGA20202 <- read.csv(file = 'MAGA20202.csv')
+Trump20202 <- read.csv(file = 'Trump20202.csv')
+electionday2 <- read.csv(file = 'electionday2.csv')
+```
+
+```{r}
+text_total2 <- unique(rbind(trump2, biden2, atrump2, abiden2, vote2, MAGA2, MAGA20202, Trump20202, electionday2))
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+text_total2 <- text_total2 %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+text_total2 %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+text_total2_tidy <- text_total2 %>% select(-text) %>% unnest()
+text_total2_tidy <- text_total2_tidy %>% rename(token = texto_tokenizado)
+
+# Se filtran las stopwords
+text_total2_tidy <- text_total2_tidy %>% filter(!(token %in% lista_stopwords))
+
+text_total2_tidy <- text_total2_tidy[!str_detect(text_total2_tidy$token, "ÿ"), ]
+text_total2_tidy <- text_total2_tidy[!str_detect(text_total2_tidy$token, "€"), ]
+text_total2_tidy <- text_total2_tidy[!str_detect(text_total2_tidy$token, "Ã"), ]
+
+totales_2 <- text_total2_tidy %>% group_by(token) %>% count(token) %>%
+            top_n(100, n) %>% arrange(desc(n))
+
+# Imprime la nube de palabras
+wordcloud(totales_2$token, totales_2$n, max.words = 100, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+# export(totales_2, "./totales_2.csv")
+```
+
+DÍA 01/11/2020 TWITTER
+
+```{r}
+trump3 <- read.csv(file = 'trump3.csv')
+biden3 <- read.csv(file = 'biden3.csv')
+atrump3 <- read.csv(file = 'atrump3.csv')
+abiden3 <- read.csv(file = 'abiden3.csv')
+vote3 <- read.csv(file = 'vote3.csv')
+MAGA3 <- read.csv(file = 'MAGA3.csv')
+MAGA20203 <- read.csv(file = 'MAGA20203.csv')
+Trump20203 <- read.csv(file = 'Trump20203.csv')
+electionday3 <- read.csv(file = 'electionday3.csv')
+Election20203 <- read.csv(file = 'Election20203.csv')
+```
+
+```{r}
+text_total3<- unique(rbind(trump3, biden3, atrump3, abiden3, vote3, MAGA3, MAGA20203, Trump20203, electionday3, Election20203))
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+text_total3 <- text_total3 %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+text_total3 %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+text_total3_tidy <- text_total3 %>% select(-text) %>% unnest()
+text_total3_tidy <- text_total3_tidy %>% rename(token = texto_tokenizado)
+
+# Se filtran las stopwords
+text_total3_tidy <- text_total3_tidy %>% filter(!(token %in% lista_stopwords))
+
+text_total3_tidy <- text_total3_tidy[!str_detect(text_total3_tidy$token, "ÿ"), ]
+text_total3_tidy <- text_total3_tidy[!str_detect(text_total3_tidy$token, "€"), ]
+text_total3_tidy <- text_total3_tidy[!str_detect(text_total3_tidy$token, "Ã"), ]
+
+totales_3 <- text_total3_tidy %>% group_by(token) %>% count(token) %>%
+            top_n(100, n) %>% arrange(desc(n))
+
+# Imprime la nube de palabras
+wordcloud(totales_3$token, totales_3$n, max.words = 100, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+# export(totales_3, "./totales_3.csv")
+```
+
+DÍA 02/11/2020 TWITTER
+
+```{r}
+trump4 <- read.csv(file = 'trump4.csv')
+biden4 <- read.csv(file = 'biden4.csv')
+atrump4 <- read.csv(file = 'atrump4.csv')
+abiden4 <- read.csv(file = 'abiden4.csv')
+vote4 <- read.csv(file = 'vote4.csv')
+MAGA4 <- read.csv(file = 'MAGA4.csv')
+MAGA20204 <- read.csv(file = 'MAGA20204.csv')
+Trump20204 <- read.csv(file = 'Trump20204.csv')
+electionday4 <- read.csv(file = 'electionday4.csv')
+Election20204 <- read.csv(file = 'Election20204.csv')
+```
+
+```{r}
+text_total4 <- unique(rbind(trump4, biden4, atrump4, abiden4, vote4, MAGA4, MAGA20204, Trump20204, electionday4, Election20204))
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+text_total4 <- text_total4 %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+text_total4 %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+text_total4_tidy <- text_total4 %>% select(-text) %>% unnest()
+text_total4_tidy <- text_total4_tidy %>% rename(token = texto_tokenizado)
+
+# Se filtran las stopwords
+text_total4_tidy <- text_total4_tidy %>% filter(!(token %in% lista_stopwords))
+
+text_total4_tidy <- text_total4_tidy[!str_detect(text_total4_tidy$token, "ÿ"), ]
+text_total4_tidy <- text_total4_tidy[!str_detect(text_total4_tidy$token, "€"), ]
+text_total4_tidy <- text_total4_tidy[!str_detect(text_total4_tidy$token, "Ã"), ]
+
+totales_4 <- text_total4_tidy %>% group_by(token) %>% count(token) %>%
+            top_n(100, n) %>% arrange(desc(n))
+
+# Imprime la nube de palabras
+wordcloud(totales_4$token, totales_4$n, max.words = 100, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+# export(totales_4, "./totales_4.csv")
+```
+
+```{r}
+# un barplot
+barplot(head(totales_1$n, n = 20), names.arg = head(totales_1$token, n = 20), col="chocolate",
+        legend = rownames(head(totales_1$token, n = 20)), cex.names=0.7, las=2, main = "Frecuencias de las palabras más repetidas")
+```
+
+```{r}
+# un barplot
+barplot(head(totales_2$n, n = 20), names.arg = head(totales_2$token, n = 20), col="chocolate",
+        legend = rownames(head(totales_2$token, n = 20)), cex.names=0.7, las=2, main = "Frecuencias de las palabras más repetidas")
+```
+
+```{r}
+# un barplot
+barplot(head(totales_3$n, n = 20), names.arg = head(totales_3$token, n = 20), col="chocolate",
+        legend = rownames(head(totales_3$token, n = 20)), cex.names=0.7, las=2, main = "Frecuencias de las palabras más repetidas")
+```
+
+```{r}
+# un barplot
+barplot(head(totales_4$n, n = 20), names.arg = head(totales_4$token, n = 20), col="chocolate",
+        legend = rownames(head(totales_4$token, n = 20)), cex.names=0.7, las=2, main = "Frecuencias de las palabras más repetidas")
+```
+
+
+```{r}
+totales__total <- rbind(totales_1, totales_2, totales_3, totales_4)
+
+totales__total <- aggregate(n ~ token, totales__total, sum)
+totales__total <- totales__total[with(totales__total, order(-totales__total$n)), ] # Orden inverso
+
+# Imprime la nube de palabras
+wordcloud(totales__total$token, totales__total$n, max.words = 100, random.order=FALSE, colors=brewer.pal(6, "Accent"))
+export(totales__total, "./totales__total.csv")
+```
+
+```{r}
+# un barplot
+barplot(head(totales__total$n, n = 20), names.arg = head(totales__total$token, n = 20), col="chocolate",
+        legend = rownames(head(totales__total$token, n = 20)), cex.names=0.7, las=2, main = "Frecuencias de las palabras más repetidas")
+```
+
+SENTIMIENTOS POR DÍA
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+totales1_token <- text_total %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+totales1_token %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+totales1_token_tidy <- totales1_token %>% select(-text) %>% unnest()
+totales1_token_tidy <- totales1_token_tidy %>% rename(token = texto_tokenizado)
+```
+
+```{r}
+totales1_token_sent <- inner_join(x = totales1_token_tidy, y = sentimientos,
+                          by = c("token" = "word"))
+```
+
+```{r}
+barplot(table(totales1_token_sent$sentiment), # datos género
+        main="Distribución sentimientos de los tuits", # título
+        col=rgb(0.8,0.1,0.1,0.6), # damos color a las barras
+        ylab="Frecuencia") # etiqueta de las ordenadas
+
+length(totales1_token_sent$token)/length(totales1_token_tidy$token)*100
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+totales2_token <- text_total2 %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+totales2_token %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+totales2_token_tidy <- totales2_token %>% select(-text) %>% unnest()
+totales2_token_tidy <- totales2_token_tidy %>% rename(token = texto_tokenizado)
+```
+
+```{r}
+totales2_token_sent <- inner_join(x = totales2_token_tidy, y = sentimientos,
+                          by = c("token" = "word"))
+```
+
+```{r}
+barplot(table(totales2_token_sent$sentiment), # datos género
+        main="Distribución sentimientos de los tuits  del 02/11/2020", # título
+        col=rgb(0.8,0.1,0.1,0.6), # damos color a las barras
+        ylab="Frecuencia") # etiqueta de las ordenadas
+
+length(totales2_token_sent$token)/length(totales2_token_tidy$token)*100
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+totales3_token <- text_total3 %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+totales3_token %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+totales3_token_tidy <- totales3_token %>% select(-text) %>% unnest()
+totales3_token_tidy <- totales3_token_tidy %>% rename(token = texto_tokenizado)
+```
+
+```{r}
+totales3_token_sent <- inner_join(x = totales3_token_tidy, y = sentimientos,
+                          by = c("token" = "word"))
+```
+
+```{r}
+barplot(table(totales3_token_sent$sentiment), # datos género
+        main="Distribución sentimientos de los tuits  del 01/11/2020", # título
+        col=rgb(0.8,0.1,0.1,0.6), # damos color a las barras
+        ylab="Frecuencia") # etiqueta de las ordenadas
+
+length(totales3_token_sent$token)/length(totales3_token_tidy$token)*100
+```
+
+```{r}
+# Se aplica la función de limpieza y tokenización a cada tweet
+totales4_token <- text_total4 %>% mutate(texto_tokenizado = map(.x = text,
+                                                   .f = limpiar_tokenizar))
+totales4_token %>% slice(1) %>% select(texto_tokenizado) %>% pull()
+
+totales4_token_tidy <- totales4_token %>% select(-text) %>% unnest()
+totales4_token_tidy <- totales4_token_tidy %>% rename(token = texto_tokenizado)
+```
+
+```{r}
+totales4_token_sent <- inner_join(x = totales4_token_tidy, y = sentimientos,
+                          by = c("token" = "word"))
+```
+
+```{r}
+barplot(table(totales4_token_sent$sentiment), # datos género
+        main="Distribución sentimientos de los tuits del 03/11/2020", # título
+        col=rgb(0.8,0.1,0.1,0.6), # damos color a las barras
+        ylab="Frecuencia") # etiqueta de las ordenadas
+
+length(totales4_token_sent$token)/length(totales4_token_tidy$token)*100
+```

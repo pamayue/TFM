@@ -1,0 +1,169 @@
+---
+title: "Trabajo6"
+author: "Pablo Mas Cayuelas"
+date: "4/12/2020"
+output: html_document
+---
+
+OBJETIVO: QUÉ PALABRAS HACEN QUE UN TUIT TENGA MÁS O MENOS REPERCUSIÓN
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rtweet)
+library(twitteR)
+library(dplyr)
+library(rlang)
+library(tidyr)
+library(rio)
+```
+
+```{r}
+library(bitops)
+library(RCurl)
+library(rjson)
+library(twitteR)
+library(tm)
+library(Rcpp)
+library(RColorBrewer)
+library(wordcloud)
+```
+
+Los tuits más populares son de gente importante: Obama, Trump, Harris, etc.
+
+```{r}
+# COGEMOS LOS TUITS POPULARES DE TODOS LOS ARCHIVOS
+abiden_pop <- read.csv(file = 'abiden_pop.csv')
+atrump_pop <- read.csv(file = 'atrump_pop.csv')
+biden_pop <- read.csv(file = 'biden_pop.csv')
+Election2020_pop <- read.csv(file = 'Election2020_pop.csv')
+electionday_pop <- read.csv(file = 'electionday_pop.csv')
+MAGA_pop <- read.csv(file = 'MAGA2020_pop.csv')
+MAGA2020_pop <- read.csv(file = 'MAGA2020_pop.csv')
+trump_pop <- read.csv(file = 'trump_pop.csv')
+Trump2020_pop <- read.csv(file = 'Trump2020_pop.csv')
+vote_pop <- read.csv(file = 'vote_pop.csv')
+
+# COGEMOS LAS PALABRAS MÁS POPULARES
+popularwords <- read.csv(file = 'head_general.csv')
+```
+
+```{r}
+# JUNTAMOS TODOS LOS POPULARES
+populartuits <- rbind(abiden_pop, atrump_pop, biden_pop, Election2020_pop, electionday_pop,
+                      MAGA_pop, MAGA2020_pop, trump_pop, Trump2020_pop, vote_pop)
+# export(populartuits, "./populartuits.csv")
+```
+
+```{r}
+# cogemos las interacciones de cada palabra
+for (i in seq_along(popularwords$word)){
+  rt = 0
+  fav = 0
+  location <- grep(popularwords$word[i], populartuits$text, ignore.case=TRUE)
+  for (j in location){
+    rt_ind = populartuits$retweet_count[location[j]]
+    fav_ind = populartuits$favorite_count[location[j]]
+    if (!is.na(rt_ind) | !is.na(fav_ind)){
+      rt = rt + rt_ind
+      fav = fav + fav_ind
+    }
+  }
+  popularwords$length[i] = length(location)
+  popularwords$rt[i] = rt
+  popularwords$fav[i] = fav
+  popularwords$interactions[i] = rt + fav
+}
+```
+
+```{r}
+# vemos un barplot de las mismas
+popularwords_int <- popularwords[with(popularwords, order(-popularwords$interactions)), ] # Orden inverso
+
+barplot(head(popularwords_int$interactions, n = 20), names.arg = head(popularwords_int$word, n = 20), cex.names=0.7, col="chocolate",
+        legend = rownames(head(popularwords_int$word, n = 20)), las=2, main = "Interacciones de las palabras más populares")
+```
+
+```{r}
+# hacemos ahora la media de interacciones por tuit
+popularwords_int$interactions_mean <- popularwords_int$interactions/popularwords_int$length
+
+popularwords_int <- popularwords_int[with(popularwords_int, order(-popularwords_int$interactions_mean)), ] # Orden inverso
+
+barplot(head(popularwords_int$interactions_mean, n = 20), cex.names=0.7, names.arg = head(popularwords_int$word, n = 20), col="chocolate",
+        legend = rownames(head(popularwords_int$word, n = 20)), las=2, main = "Media de interacciones por tuit de las palabras más populares")
+```
+
+TUITS CON CONTENIDO MULTIMEDIA
+
+```{r}
+# vamos a probarlo también con los populares de momento
+populartuits_media <- populartuits[populartuits$media_type=="photo", ]
+populartuits_nomedia <- populartuits[populartuits$media_type=="", ]
+```
+
+```{r}
+# otro barplot
+rt_media <- sum(populartuits_media$retweet_count)
+rt_nomedia <- sum(populartuits_nomedia$retweet_count)
+fav_media <- sum(populartuits_media$favorite_count)
+fav_nomedia <- sum(populartuits_nomedia$favorite_count)
+int_media <- (rt_media + fav_media)/length(populartuits_media$text)
+int_nomedia <- (rt_nomedia + fav_nomedia)/length(populartuits_nomedia$text)
+equis <- c("multimedia", "no multimedia")
+barplot(c(int_media, int_nomedia), names.arg = equis, col="chocolate", main = "Media de interacciones de tuits con y sin contenido multimedia")
+```
+
+
+VER SI PONER HASTTAGS HACE QUE UN TUIT TENGA MÁS REPERCUSIÓN
+
+```{r}
+# vamos a probarlo también con los populares de momento
+populartuits_nohashtags <- populartuits[populartuits$hashtags=="", ]
+populartuits_hashtags <- populartuits[populartuits$hashtags!="", ]
+```
+
+```{r}
+# otro barplot
+rt_hashtags <- sum(populartuits_hashtags$retweet_count)
+rt_nohashtags <- sum(populartuits_nohashtags$retweet_count)
+fav_hashtags <- sum(populartuits_hashtags$favorite_count)
+fav_nohashtags <- sum(populartuits_nohashtags$favorite_count)
+int_hashtags <- (rt_hashtags + fav_hashtags)/length(populartuits_hashtags$text)
+int_nohashtags <- (rt_nohashtags + fav_nohashtags)/length(populartuits_nohashtags$text)
+equis <- c("hashtag", "no hashtags")
+barplot(c(int_hashtags, int_nohashtags), names.arg = equis, col="chocolate", main = "Media de interacciones de tuits con y sin hashtags")
+```
+
+FUENTES DESDE LA QUE HAN SIDO ENVIADO LOS TUITS
+
+```{r}
+# COGEMOS LOS TUITS POPULARES
+populartuits <- read.csv(file = 'populartuits.csv')
+```
+
+```{r}
+# vamos a probarlo también con los populares de momento
+populartuits_iphone <- populartuits[populartuits$source=="Twitter for iPhone", ]
+populartuits_web <- populartuits[populartuits$source=="Twitter Media Studio", ]
+populartuits_web2 <- populartuits[populartuits$source=="Twitter Web App", ]
+populartuits_android <- populartuits[populartuits$source=="Twitter for Android", ]
+```
+
+```{r}
+# otro barplot
+rt_iphone <- sum(populartuits_iphone$retweet_count)
+rt_web <- sum(populartuits_web$retweet_count)
+rt_web2 <- sum(populartuits_web2$retweet_count)
+rt_android <- sum(populartuits_android$retweet_count)
+fav_iphone <- sum(populartuits_iphone$favorite_count)
+fav_web <- sum(populartuits_web$favorite_count)
+fav_web2 <- sum(populartuits_web2$favorite_count)
+fav_android <- sum(populartuits_android$favorite_count)
+int_iphone <- (rt_iphone + fav_iphone)/length(populartuits_iphone$text)
+int_web <- (rt_web + fav_web)/length(populartuits_web$text)
+int_web2 <- (rt_web2 + fav_web2)/length(populartuits_web2$text)
+int_android <- (rt_android + fav_android)/length(populartuits_android$text)
+equis <- c("iPhone", "Web", "App Web", "Android")
+barplot(c(int_iphone, int_web, int_web2, int_android), names.arg = equis, col="chocolate", main = "Media de interacciones dependiendo del dispositivo")
+```
