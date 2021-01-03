@@ -16,23 +16,13 @@ library(rio)
 ```
 
 ```{r}
-consumer_key <- "8561WLkRJlkiuri0aLqO3O3CU"
-consumer_secret <-"CSyHwy6h1eOLe9RGhacq0CUVOOvAB74CCk9RMEy3VvvL7nywNQ"
-access_token <-"226663175-2WIU4JA7PYF61wtFDfxQRYiS8m3pTGxRlK48ckVj"
-access_secret <-"Myt3GfEAYlQb9megmv1rmwqpcL8wTiOh5CH0WSryI7B3e"
+consumer_key <- "-------------------"
+consumer_secret <-"-------------------"
+access_token <-"-------------------"
+access_secret <-"----------------------"
 setup_twitter_oauth(consumer_key, consumer_secret, access_token=access_token, access_secret=access_secret)
 ```
 
-```{r}
-usuario<- userTimeline('usuario',n=100)
-usuario<- userTimeline('usuario',n=100)
-```
-
-
-```{r}
-do.call("rbind", lapply(xxx, as.data.frame))
-twListToDF(xxx)
-```
 
 
 ```{r}
@@ -219,7 +209,7 @@ export(Election20203.df, "./Election20203.csv")
 ```
 
 ```{r}
-# librería twitteR 1-2 noviembre
+# librería twitteR 2-3 noviembre
 trump4 <-searchTwitter("Trump", n=10000, since='2020-11-3', until = '2020-11-4') # hecho4
 trump4.df<-twListToDF(trump4)
 export(trump4.df, "./trump4.csv")
